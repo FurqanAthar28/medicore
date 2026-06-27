@@ -1,106 +1,224 @@
-# 🏥 MediCore — Hospital Management System
+# 🏥 MediCore – Hospital Management System
 
-A full-featured hospital management system built with Django. MediCore allows hospital staff to manage patients, doctors, appointments, and billing — all from a clean, professional dashboard with role-based access control.
+A modern Hospital Management System built with **Django** and **PostgreSQL** for managing patients, doctors, appointments, billing, and payments. The application is deployed on Railway and uses Neon PostgreSQL as the production database.
 
-## ✨ Features
+## 🌐 Live Demo
 
-- **Secure Login** — Django authentication with role-based access control
-- **Patient Management** — Add, edit, soft-delete patients with trash/restore functionality
-- **Doctor Management** — Register and manage doctors with specializations
-- **Appointment Scheduling** — Create and track appointments with status badges (Scheduled, Completed, Cancelled)
-- **Billing System** — Create bills, record payments, track balance automatically
-- **PDF Invoice Generation** — Download professional invoices via ReportLab
-- **Dashboard** — Real-time stats for patients, doctors, appointments and unpaid bills
-- **Bootstrap 5 UI** — Clean dark navy sidebar with responsive layout
+https://medicore-production-8796.up.railway.app
 
-## 🛠️ Tech Stack
+> **Admin Panel**
+>
+> https://medicore-production-8796.up.railway.app/admin/
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.13, Django 4.2 |
-| Database | SQLite (development) |
-| Frontend | Bootstrap 5, HTML, CSS |
-| PDF Generation | ReportLab |
-| Auth | Django built-in + Group-based RBAC |
-| Config | python-decouple (.env) |
+---
 
-## ⚙️ Setup Instructions
+# ✨ Features
 
-### 1. Clone the repository
+### 👨‍⚕️ Doctor Management
+- Register doctors
+- Edit doctor information
+- View doctor directory
+
+### 🧑‍🤝‍🧑 Patient Management
+- Add patients
+- Update patient records
+- Soft delete & restore patients
+- Patient listing
+
+### 📅 Appointment Management
+- Schedule appointments
+- Update appointment status
+- View appointments
+
+### 💳 Billing System
+- Generate bills
+- Track paid amount
+- Calculate remaining balance
+- Bill status (Paid / Partial / Unpaid)
+
+### 💰 Payment Management
+- Record payments
+- Payment history
+- Multiple payment methods
+
+### 📄 PDF Generation
+- Download printable invoices
+- Professional PDF bills using ReportLab
+
+### 🔐 Authentication
+- Django Admin authentication
+- Secure login
+- Session management
+
+### ☁️ Deployment
+- Railway hosting
+- Neon PostgreSQL database
+- WhiteNoise static file serving
+- Gunicorn production server
+
+---
+
+# 🛠 Tech Stack
+
+- Python 3
+- Django 6
+- PostgreSQL (Neon)
+- Railway
+- HTML5
+- CSS3
+- Bootstrap 5
+- WhiteNoise
+- Gunicorn
+- ReportLab
+
+---
+
+# 📷 Screenshots
+
+## Dashboard
+
+![Dashboard](screenshots/dashboard.png)
+
+---
+
+## Patients
+
+![Patients](screenshots/patients.png)
+
+---
+
+## Doctors
+
+![Doctors](screenshots/doctors.png)
+
+---
+
+## Appointments
+
+![Appointments](screenshots/appointments.png)
+
+---
+
+## Bills
+
+![Bills](screenshots/bills.png)
+
+---
+
+## Payments
+
+![Payments](screenshots/payments.png)
+
+---
+
+# 🚀 Local Installation
+
+Clone the repository
+
 ```bash
 git clone https://github.com/FurqanAthar28/medicore.git
 cd medicore
 ```
 
-### 2. Create and activate virtual environment
+Create virtual environment
+
 ```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
+python -m venv env
 ```
 
-### 3. Install dependencies
+Activate environment
+
+### Windows
+
 ```bash
-pip install django reportlab python-decouple
+env\Scripts\activate
 ```
 
-### 4. Create `.env` file
-```
-SECRET_KEY=your-secret-key-here
+### Linux / macOS
+
+```bash
+source env/bin/activate
 ```
 
-### 5. Run migrations
+Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+Run migrations
+
 ```bash
 python manage.py migrate
 ```
 
-### 6. Create superuser
+Create superuser
+
 ```bash
 python manage.py createsuperuser
 ```
 
-### 7. Run the server
+Run server
+
 ```bash
 python manage.py runserver
 ```
 
-Visit `http://127.0.0.1:8000`
+---
 
-## 📁 Project Structure
+# ⚙️ Environment Variables
 
-```
-medicore/
-├── core/                  # Project settings and URLs
-│   ├── settings.py
-│   └── urls.py
-├── patients/              # Main app
-│   ├── models.py          # Patient, Doctor, Appointment, Bill, Payment
-│   ├── views.py           # All views including PDF generation
-│   ├── forms.py           # ModelForms with Bootstrap styling
-│   ├── urls.py            # App URLs
-│   └── admin.py
-├── templates/
-│   ├── base.html          # Dark navy sidebar layout
-│   ├── login.html
-│   ├── dashboard/
-│   │   └── admin_dashboard.html
-│   └── patients/          # All patient, doctor, appointment, bill templates
-├── .env                   # Environment variables (not committed)
-├── .gitignore
-└── manage.py
+Create a `.env` file in the project root.
+
+```env
+SECRET_KEY=your_secret_key
+DEBUG=True
+DATABASE_URL=your_database_url
+ALLOWED_HOSTS=localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=http://localhost:8000
 ```
 
-## 🔐 Role-Based Access
+---
 
-- **Admin/Superuser** — Full access to all features including registering doctors
-- **Staff** — Can manage patients, appointments and billing
+# 📦 Deployment
 
-## 👨‍💻 Author
+This project is deployed using:
+
+- Railway
+- Neon PostgreSQL
+- WhiteNoise
+- Gunicorn
+
+---
+
+# 📁 Project Structure
+
+```
+core/
+patients/
+templates/
+static/
+screenshots/
+manage.py
+requirements.txt
+build.sh
+README.md
+```
+
+---
+
+# 👨‍💻 Author
 
 **Furqan Athar**
-- GitHub: https://github.com/FurqanAthar28
-- LinkedIn: https://www.linkedin.com/in/furqan-athar-a0090a207
+
+GitHub:
+https://github.com/FurqanAthar28
+
+LinkedIn:
+https://www.linkedin.com/in/furqan-athar/
+
+---
+
+# 📄 License
+
+This project is intended for educational and portfolio purposes.
