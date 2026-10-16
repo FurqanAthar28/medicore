@@ -136,9 +136,14 @@ class MedicinePermissionTests(PharmacyTestCase):
 
 
 class SeedMedicinesTests(TestCase):
+    def test_migration_loads_starter_medicines(self):
+        from .seed_data import MEDICINES
+        self.assertEqual(Medicine.objects.filter(name__in=[m[0] for m in MEDICINES]).count(), len(MEDICINES))
+
     def test_seed_is_idempotent_and_keeps_edits(self):
         from django.core.management import call_command
         from io import StringIO
+        Medicine.objects.all().delete()
         call_command('seed_medicines', stdout=StringIO())
         count = Medicine.objects.count()
         self.assertGreater(count, 20)
@@ -151,6 +156,7 @@ class SeedMedicinesTests(TestCase):
         self.assertEqual(panadol.unit_price, Decimal('3.00'))
 
     def test_empty_pharmacy_shows_hint(self):
+        Medicine.objects.all().delete()
         user = User.objects.create_superuser('admin', password='pass12345')
         self.client.force_login(user)
         self.assertContains(self.client.get(reverse('pharmacy:medicine_list')), 'Add your first medicine')

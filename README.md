@@ -169,7 +169,9 @@ Create superuser
 python manage.py createsuperuser
 ```
 
-(Optional) Load a starter list of common medicines into the pharmacy
+`migrate` also loads a starter list of 32 common medicines into the pharmacy
+(sample prices; edit them from the Medicines page). If you delete them and want
+them back, run:
 
 ```bash
 python manage.py seed_medicines
