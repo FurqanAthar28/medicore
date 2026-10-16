@@ -133,3 +133,25 @@ class MedicinePermissionTests(PharmacyTestCase):
             'unit_price': '45', 'stock_quantity': '50', 'reorder_level': '10', 'expiry_date': '', 'is_active': 'on',
         })
         self.assertTrue(Medicine.objects.filter(name='Augmentin').exists())
+
+
+class SeedMedicinesTests(TestCase):
+    def test_seed_is_idempotent_and_keeps_edits(self):
+        from django.core.management import call_command
+        from io import StringIO
+        call_command('seed_medicines', stdout=StringIO())
+        count = Medicine.objects.count()
+        self.assertGreater(count, 20)
+        panadol = Medicine.objects.get(name='Panadol 500mg')
+        panadol.unit_price = Decimal('3.00')
+        panadol.save()
+        call_command('seed_medicines', stdout=StringIO())
+        self.assertEqual(Medicine.objects.count(), count)
+        panadol.refresh_from_db()
+        self.assertEqual(panadol.unit_price, Decimal('3.00'))
+
+    def test_empty_pharmacy_shows_hint(self):
+        user = User.objects.create_superuser('admin', password='pass12345')
+        self.client.force_login(user)
+        self.assertContains(self.client.get(reverse('pharmacy:medicine_list')), 'Add your first medicine')
+        self.assertContains(self.client.get(reverse('pharmacy:sale_create')), 'no medicines available to sell')

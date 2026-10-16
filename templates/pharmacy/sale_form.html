@@ -24,6 +24,12 @@
         </div>
         <h6 class="fw-semibold mt-4 mb-2">Medicines</h6>
         <p class="text-muted small">Only medicines that are in stock and not expired are listed.</p>
+        {% if no_medicines %}
+        <div class="alert alert-warning small">
+            There are no medicines available to sell.
+            <a href="{% url 'pharmacy:medicine_list' %}">Add medicines or restock</a> first.
+        </div>
+        {% endif %}
         {% include 'includes/formset_rows.html' with formset=formset add_label="Add medicine" %}
         <div class="mt-4">
             <button class="btn btn-success"><i class="bi bi-cart-check"></i> Complete Sale</button>

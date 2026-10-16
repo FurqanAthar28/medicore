@@ -45,7 +45,19 @@
                 {% endif %}
             </tr>
             {% empty %}
-            <tr><td colspan="8" class="text-center text-muted">No medicines found.</td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-4">
+                {% if query or low %}
+                No medicines match your search.
+                {% else %}
+                <div class="mb-2">No medicines have been added to the pharmacy yet.</div>
+                {% if is_pharmacist %}
+                <a href="{% url 'pharmacy:medicine_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Add your first medicine</a>
+                <div class="small mt-2">Or load a starter list with <code>python manage.py seed_medicines</code></div>
+                {% else %}
+                <div class="small">Ask an Admin or Pharmacist to add medicines.</div>
+                {% endif %}
+                {% endif %}
+            </td></tr>
             {% endfor %}
         </tbody>
     </table>

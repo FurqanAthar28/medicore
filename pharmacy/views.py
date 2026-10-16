@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from patients.models import Patient, Prescription
 from patients.roles import get_doctor, is_admin, pharmacist_required
-from .forms import MedicineForm, SaleForm, SaleItemFormSet
+from .forms import MedicineForm, SaleForm, SaleItemFormSet, sellable_medicines
 from .models import Medicine, Sale
 from .services import StockError, create_sale
 
@@ -97,6 +97,7 @@ def sale_create(request):
                 return redirect('pharmacy:sale_detail', pk=sale.pk)
     return render(request, 'pharmacy/sale_form.html', {
         'form': form, 'formset': formset, 'prescription': prescription,
+        'no_medicines': not sellable_medicines().exists(),
     })
 
 

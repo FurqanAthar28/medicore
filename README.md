@@ -169,6 +169,12 @@ Create superuser
 python manage.py createsuperuser
 ```
 
+(Optional) Load a starter list of common medicines into the pharmacy
+
+```bash
+python manage.py seed_medicines
+```
+
 Run server
 
 ```bash
