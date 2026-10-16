@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Prescriptions{% endblock %}
+{% block page_title %}Prescriptions{% endblock %}
+
+{% block content %}
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-semibold mb-0">{% if current_doctor and not is_admin %}My Prescriptions{% else %}All Prescriptions{% endif %}</h6>
+        <a href="{% url 'patients:create_prescription' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Write Prescription</a>
+    </div>
+    <table class="table table-hover">
+        <thead class="table-light"><tr><th>#</th><th>Date</th><th>Patient</th><th>Doctor</th><th>Diagnosis</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+            {% for rx in prescriptions %}
+            <tr>
+                <td>{{ rx.pk }}</td>
+                <td>{{ rx.created_at|date:"d M Y" }}</td>
+                <td><a href="{% url 'patients:patient_detail' rx.patient.pk %}">{{ rx.patient.name }}</a></td>
+                <td>Dr. {{ rx.doctor.name }}</td>
+                <td>{{ rx.diagnosis }}</td>
+                <td>{% if rx.sales.all %}<span class="badge bg-success">Dispensed</span>{% else %}<span class="badge bg-secondary">Pending</span>{% endif %}</td>
+                <td><a href="{% url 'patients:prescription_detail' rx.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted">No prescriptions yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

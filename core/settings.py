@@ -9,7 +9,6 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-import os
 import dj_database_url
 from decouple import config
 from pathlib import Path
@@ -25,10 +24,11 @@ SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
-).split(",")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-     'patients',
+    'patients',
+    'pharmacy',
 ]
 
 MIDDLEWARE = [
@@ -73,6 +74,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'patients.context_processors.site_settings',
             ],
         },
     },
@@ -91,7 +93,7 @@ if DATABASE_URL:
         "default": dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=True,
+            ssl_require=config("DATABASE_SSL_REQUIRE", default=True, cast=bool),
         )
     }
 else:
@@ -140,13 +142,32 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'patients:dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Map Django's "error" message level to Bootstrap's "danger" alert class
+from django.contrib.messages import constants as message_constants
+MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
+
+# Branding / app-wide values (override via environment variables)
+HOSPITAL_NAME = config("HOSPITAL_NAME", default="MediCore")
+CURRENCY_SYMBOL = config("CURRENCY_SYMBOL", default="Rs.")
+ADMIN_GROUP_NAME = config("ADMIN_GROUP_NAME", default="Admin")
+PHARMACIST_GROUP_NAME = config("PHARMACIST_GROUP_NAME", default="Pharmacist")
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

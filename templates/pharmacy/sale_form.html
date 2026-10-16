@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Sell Medicines{% endblock %}
+{% block page_title %}Pharmacy — Sell Medicines{% endblock %}
+
+{% block content %}
+<div class="card p-4" style="max-width: 900px;">
+    <h6 class="fw-semibold mb-1">New Pharmacy Sale</h6>
+    {% if prescription %}
+    <p class="text-muted small mb-0">
+        Dispensing <a href="{% url 'patients:prescription_detail' prescription.pk %}">Prescription #{{ prescription.pk }}</a>
+        by Dr. {{ prescription.doctor.name }}. Adjust quantities if needed.
+    </p>
+    {% endif %}
+    <form method="POST" class="mt-3">
+        {% csrf_token %}
+        <div class="row g-3 mb-3">
+            {% for field in form %}
+            <div class="col-md-6">
+                <label class="form-label small fw-semibold">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <h6 class="fw-semibold mt-4 mb-2">Medicines</h6>
+        <p class="text-muted small">Only medicines that are in stock and not expired are listed.</p>
+        {% if no_medicines %}
+        <div class="alert alert-warning small">
+            There are no medicines available to sell.
+            <a href="{% url 'pharmacy:medicine_list' %}">Add medicines or restock</a> first.
+        </div>
+        {% endif %}
+        {% include 'includes/formset_rows.html' with formset=formset add_label="Add medicine" %}
+        <div class="mt-4">
+            <button class="btn btn-success"><i class="bi bi-cart-check"></i> Complete Sale</button>
+            <a href="{% url 'pharmacy:sale_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

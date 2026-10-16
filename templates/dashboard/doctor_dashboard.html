@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}My Dashboard{% endblock %}
+{% block page_title %}Welcome, Dr. {{ doctor.name }}{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card blue p-3">
+            <div class="text-muted small">Today's Appointments</div>
+            <div class="fs-3 fw-bold text-primary">{{ today_appointments|length }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card orange p-3">
+            <div class="text-muted small">Upcoming (7 days)</div>
+            <div class="fs-3 fw-bold text-warning">{{ upcoming_appointments|length }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card green p-3">
+            <div class="text-muted small">My Patients</div>
+            <div class="fs-3 fw-bold text-success">{{ patient_count }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card red p-3">
+            <div class="text-muted small">Prescriptions Written</div>
+            <div class="fs-3 fw-bold text-danger">{{ prescription_count }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{% url 'patients:patient_list' %}" class="btn btn-primary btn-sm"><i class="bi bi-search"></i> Select Patient</a>
+    <a href="{% url 'patients:create_prescription' %}" class="btn btn-success btn-sm"><i class="bi bi-file-medical"></i> Write Prescription</a>
+    <a href="{% url 'patients:create_appointment' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-calendar-plus"></i> Book Appointment</a>
+    <a href="{% url 'pharmacy:sale_create' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-cart-plus"></i> Pharmacy Sale</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card p-4">
+            <h6 class="fw-semibold mb-3">Today's Appointments</h6>
+            <table class="table table-hover align-middle">
+                <thead class="table-light"><tr><th>Time</th><th>Patient</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                    {% for appt in today_appointments %}
+                    <tr>
+                        <td>{{ appt.appointment_time|time:"H:i" }}</td>
+                        <td><a href="{% url 'patients:patient_detail' appt.patient.pk %}">{{ appt.patient.name }}</a></td>
+                        <td><span class="badge badge-{{ appt.status|lower }}">{{ appt.status }}</span></td>
+                        <td class="text-end">
+                            {% if appt.status == 'Scheduled' %}
+                            <a href="{% url 'patients:create_prescription' %}?appointment={{ appt.pk }}" class="btn btn-sm btn-success">Consult</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted">No appointments today.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h6 class="fw-semibold mb-3 mt-3">Upcoming</h6>
+            <table class="table table-sm">
+                <tbody>
+                    {% for appt in upcoming_appointments %}
+                    <tr>
+                        <td>{{ appt.appointment_date|date:"D d M" }}</td>
+                        <td>{{ appt.appointment_time|time:"H:i" }}</td>
+                        <td><a href="{% url 'patients:patient_detail' appt.patient.pk %}">{{ appt.patient.name }}</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td class="text-muted text-center">Nothing scheduled in the next 7 days.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card p-4">
+            <h6 class="fw-semibold mb-3">Recent Prescriptions</h6>
+            <ul class="list-group list-group-flush">
+                {% for rx in recent_prescriptions %}
+                <a href="{% url 'patients:prescription_detail' rx.pk %}" class="list-group-item list-group-item-action px-0">
+                    <div class="d-flex justify-content-between">
+                        <strong>{{ rx.patient.name }}</strong>
+                        <small class="text-muted">{{ rx.created_at|date:"d M Y" }}</small>
+                    </div>
+                    <small class="text-muted">{{ rx.diagnosis }}</small>
+                </a>
+                {% empty %}
+                <li class="list-group-item px-0 text-muted">No prescriptions yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

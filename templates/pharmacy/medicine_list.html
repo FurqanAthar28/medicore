@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Medicines{% endblock %}
+{% block page_title %}Pharmacy — Medicines{% endblock %}
+
+{% block content %}
+<div class="card p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <form method="GET" class="d-flex gap-2">
+            <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search medicine...">
+            <div class="form-check align-self-center text-nowrap">
+                <input class="form-check-input" type="checkbox" name="low" value="1" id="low" {% if low %}checked{% endif %} onchange="this.form.submit()">
+                <label class="form-check-label small" for="low">Low stock only</label>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary">Search</button>
+        </form>
+        <div class="d-flex gap-2">
+            <a href="{% url 'pharmacy:sale_create' %}" class="btn btn-success btn-sm"><i class="bi bi-cart-plus"></i> Sell Medicines</a>
+            {% if is_pharmacist %}
+            <a href="{% url 'pharmacy:medicine_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Add Medicine</a>
+            {% endif %}
+        </div>
+    </div>
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr><th>Name</th><th>Generic</th><th>Form</th><th>Price</th><th>Stock</th><th>Expiry</th><th>Status</th>{% if is_pharmacist %}<th></th>{% endif %}</tr>
+        </thead>
+        <tbody>
+            {% for med in medicines %}
+            <tr>
+                <td class="fw-semibold">{{ med.name }}</td>
+                <td>{{ med.generic_name|default:"—" }}</td>
+                <td>{{ med.form }}</td>
+                <td>{{ CURRENCY }} {{ med.unit_price }}</td>
+                <td>{% if med.is_low_stock %}<span class="text-danger fw-semibold">{{ med.stock_quantity }}</span>{% else %}{{ med.stock_quantity }}{% endif %}</td>
+                <td>{{ med.expiry_date|date:"d M Y"|default:"—" }}</td>
+                <td>
+                    {% if not med.is_active %}<span class="badge bg-secondary">Inactive</span>
+                    {% elif med.is_expired %}<span class="badge bg-danger">Expired</span>
+                    {% elif med.stock_quantity == 0 %}<span class="badge bg-danger">Out of stock</span>
+                    {% elif med.is_low_stock %}<span class="badge bg-warning text-dark">Low stock</span>
+                    {% else %}<span class="badge bg-success">Available</span>{% endif %}
+                </td>
+                {% if is_pharmacist %}
+                <td><a href="{% url 'pharmacy:medicine_update' med.pk %}" class="btn btn-sm btn-outline-primary">Edit</a></td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">
+                {% if query or low %}
+                No medicines match your search.
+                {% else %}
+                <div class="mb-2">No medicines have been added to the pharmacy yet.</div>
+                {% if is_pharmacist %}
+                <a href="{% url 'pharmacy:medicine_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus"></i> Add your first medicine</a>
+                <div class="small mt-2">Or load a starter list with <code>python manage.py seed_medicines</code></div>
+                {% else %}
+                <div class="small">Ask an Admin or Pharmacist to add medicines.</div>
+                {% endif %}
+                {% endif %}
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

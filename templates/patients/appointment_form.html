@@ -7,6 +7,7 @@
     <h6 class="fw-semibold mb-4">{{ title }}</h6>
     <form method="POST">
         {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger small">{{ form.non_field_errors }}</div>{% endif %}
         {% for field in form %}
         <div class="mb-3">
             <label class="form-label small fw-semibold">{{ field.label }}</label>

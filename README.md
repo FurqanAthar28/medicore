@@ -15,9 +15,20 @@ https://medicore-production-8796.up.railway.app
 # ✨ Features
 
 ### 👨‍⚕️ Doctor Management
-- Register doctors
+- Register doctors (optionally with a portal login)
 - Edit doctor information
-- View doctor directory
+- Doctor directory and doctor profile pages
+
+### 🩺 Doctor Portal
+- Personal dashboard: today's and upcoming appointments
+- Search and select a patient, view full patient history
+- Write prescriptions (start a consultation straight from an appointment)
+- Send a prescription to the pharmacy
+
+### 💊 Pharmacy
+- Medicine inventory with stock, price, expiry and low-stock alerts
+- Sell medicines to patients, or dispense a prescription
+- Stock is deducted automatically and a bill is raised (pay now or later)
 
 ### 🧑‍🤝‍🧑 Patient Management
 - Add patients
@@ -158,6 +169,14 @@ Create superuser
 python manage.py createsuperuser
 ```
 
+`migrate` also loads a starter list of 32 common medicines into the pharmacy
+(sample prices; edit them from the Medicines page). If you delete them and want
+them back, run:
+
+```bash
+python manage.py seed_medicines
+```
+
 Run server
 
 ```bash
@@ -178,6 +197,31 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 CSRF_TRUSTED_ORIGINS=http://localhost:8000
 ```
 
+Optional variables:
+
+```env
+HOSPITAL_NAME=MediCore
+CURRENCY_SYMBOL=Rs.
+ADMIN_GROUP_NAME=Admin
+PHARMACIST_GROUP_NAME=Pharmacist
+DATABASE_SSL_REQUIRE=True
+SECURE_SSL_REDIRECT=False
+SECURE_HSTS_SECONDS=0
+```
+
+---
+
+# 👥 User Roles
+
+| Role | How to set up | Can do |
+|------|---------------|--------|
+| Admin | Superuser, or user in the `Admin` group | Everything, including managing doctors |
+| Doctor | Register a doctor with a username/password | Doctor portal, prescriptions, own appointments, pharmacy sales |
+| Pharmacist | User in the `Pharmacist` group | Manage medicine inventory |
+| Staff | Any other logged-in user | Patients, appointments, billing, pharmacy sales |
+
+Create the `Admin` and `Pharmacist` groups from the Django admin panel (`/admin/`).
+
 ---
 
 # 📦 Deployment
@@ -196,6 +240,7 @@ This project is deployed using:
 ```
 core/
 patients/
+pharmacy/
 templates/
 static/
 screenshots/

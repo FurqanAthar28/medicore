@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediCore - {% block title %}Dashboard{% endblock %}</title>
+    <title>{{ HOSPITAL_NAME }} - {% block title %}Dashboard{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -16,6 +16,8 @@
             top: 0; left: 0;
             padding-top: 20px;
             z-index: 100;
+            overflow-y: auto;
+            max-height: 100vh;
         }
         .sidebar .brand {
             color: #fff;
@@ -72,6 +74,7 @@
         .badge-unpaid { background-color: #e53e3e; }
         .badge-partial { background-color: #ed8936; }
         .badge-paid { background-color: #38a169; }
+        .formset-row .btn-remove { margin-top: 0; }
     </style>
 </head>
 <body>
@@ -85,8 +88,24 @@
         <i class="bi bi-speedometer2"></i> Dashboard
     </a>
 
+    {% if current_doctor and not is_admin %}
+    <div class="nav-section">Doctor Portal</div>
+    <a href="{% url 'patients:appointment_list' %}" class="nav-link {% if 'appointment' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-calendar-check"></i> My Appointments
+    </a>
+    <a href="{% url 'patients:patient_list' %}?mine=1" class="nav-link {% if request.resolver_match.url_name == 'patient_list' and request.GET.mine %}active{% endif %}">
+        <i class="bi bi-people"></i> My Patients
+    </a>
+    <a href="{% url 'patients:prescription_list' %}" class="nav-link {% if 'prescription' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-file-medical"></i> Prescriptions
+    </a>
+    <a href="{% url 'patients:doctor_detail' current_doctor.pk %}" class="nav-link {% if request.resolver_match.url_name == 'doctor_detail' %}active{% endif %}">
+        <i class="bi bi-person-badge"></i> My Profile
+    </a>
+    {% endif %}
+
     <div class="nav-section">Patients</div>
-    <a href="{% url 'patients:patient_list' %}" class="nav-link {% if 'patient' in request.resolver_match.url_name %}active{% endif %}">
+    <a href="{% url 'patients:patient_list' %}" class="nav-link {% if 'patient' in request.resolver_match.url_name and not request.GET.mine %}active{% endif %}">
         <i class="bi bi-person-lines-fill"></i> All Patients
     </a>
     <a href="{% url 'patients:create_patient' %}" class="nav-link">
@@ -96,12 +115,30 @@
         <i class="bi bi-trash"></i> Trash
     </a>
 
+    {% if is_admin or not current_doctor %}
     <div class="nav-section">Clinical</div>
     <a href="{% url 'patients:doctor_list' %}" class="nav-link {% if 'doctor' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-person-badge"></i> Doctors
     </a>
     <a href="{% url 'patients:appointment_list' %}" class="nav-link {% if 'appointment' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-calendar-check"></i> Appointments
+    </a>
+    {% if is_admin %}
+    <a href="{% url 'patients:prescription_list' %}" class="nav-link {% if 'prescription' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-file-medical"></i> Prescriptions
+    </a>
+    {% endif %}
+    {% endif %}
+
+    <div class="nav-section">Pharmacy</div>
+    <a href="{% url 'pharmacy:medicine_list' %}" class="nav-link {% if 'medicine' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-capsule"></i> Medicines
+    </a>
+    <a href="{% url 'pharmacy:sale_create' %}" class="nav-link {% if request.resolver_match.url_name == 'sale_create' %}active{% endif %}">
+        <i class="bi bi-cart-plus"></i> Sell Medicines
+    </a>
+    <a href="{% url 'pharmacy:sale_list' %}" class="nav-link {% if request.resolver_match.url_name in 'sale_list sale_detail' %}active{% endif %}">
+        <i class="bi bi-bag-check"></i> Sales
     </a>
 
     <div class="nav-section">Billing</div>
@@ -110,9 +147,12 @@
     </a>
 
     <div class="nav-section">Account</div>
-    <a href="{% url 'logout' %}" class="nav-link">
-        <i class="bi bi-box-arrow-left"></i> Logout
-    </a>
+    <form method="POST" action="{% url 'logout' %}" class="m-0">
+        {% csrf_token %}
+        <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start">
+            <i class="bi bi-box-arrow-left"></i> Logout
+        </button>
+    </form>
 </div>
 
 <!-- Main Content -->
@@ -135,5 +175,28 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Generic "add row" support for Django formsets rendered with templates/includes/formset_rows.html
+document.querySelectorAll('[data-formset]').forEach(function (container) {
+    var prefix = container.dataset.formset;
+    var total = document.getElementById('id_' + prefix + '-TOTAL_FORMS');
+    var template = document.getElementById(prefix + '-empty-form');
+    var rows = container.querySelector('.formset-rows');
+    container.querySelector('.btn-add-row').addEventListener('click', function () {
+        var index = parseInt(total.value, 10);
+        rows.insertAdjacentHTML('beforeend', template.innerHTML.replace(/__prefix__/g, index));
+        total.value = index + 1;
+    });
+    rows.addEventListener('click', function (event) {
+        var button = event.target.closest('.btn-remove');
+        if (!button) return;
+        var row = button.closest('.formset-row');
+        // Mark the row deleted so Django skips it during validation
+        row.querySelector('input[name$="-DELETE"]').value = 'on';
+        row.style.display = 'none';
+    });
+});
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

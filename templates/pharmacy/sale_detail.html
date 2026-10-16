@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Sale #{{ sale.pk }}{% endblock %}
+{% block page_title %}Pharmacy Sale #{{ sale.pk }}{% endblock %}
+
+{% block content %}
+<div class="card p-4" style="max-width: 800px;">
+    <table class="table table-sm mb-3">
+        <tr><td class="text-muted" style="width: 160px;">Patient</td><td><a href="{% url 'patients:patient_detail' sale.patient.pk %}">{{ sale.patient.name }}</a></td></tr>
+        <tr><td class="text-muted">Date</td><td>{{ sale.created_at|date:"d M Y H:i" }}</td></tr>
+        <tr><td class="text-muted">Sold By</td><td>{{ sale.sold_by.username|default:"—" }}</td></tr>
+        {% if sale.prescription %}<tr><td class="text-muted">Prescription</td><td><a href="{% url 'patients:prescription_detail' sale.prescription.pk %}">#{{ sale.prescription.pk }}</a></td></tr>{% endif %}
+        {% if sale.bill %}<tr><td class="text-muted">Bill</td><td><a href="{% url 'patients:bill_detail' sale.bill.pk %}">#{{ sale.bill.pk }}</a> <span class="badge badge-{{ sale.bill.status|lower }}">{{ sale.bill.status }}</span></td></tr>{% endif %}
+    </table>
+    <table class="table table-bordered">
+        <thead class="table-light"><tr><th>Medicine</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.medicine.name }}</td>
+                <td class="text-end">{{ item.quantity }}</td>
+                <td class="text-end">{{ CURRENCY }} {{ item.unit_price }}</td>
+                <td class="text-end">{{ CURRENCY }} {{ item.line_total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot><tr><th colspan="3" class="text-end">Grand Total</th><th class="text-end">{{ CURRENCY }} {{ sale.total_amount }}</th></tr></tfoot>
+    </table>
+    <div class="d-flex gap-2">
+        {% if sale.bill and sale.bill.balance > 0 %}
+        <a href="{% url 'patients:add_payment' sale.bill.pk %}" class="btn btn-success btn-sm">Record Payment</a>
+        {% endif %}
+        {% if sale.bill %}<a href="{% url 'patients:download_invoice' sale.bill.pk %}" class="btn btn-outline-secondary btn-sm">Download Invoice</a>{% endif %}
+    </div>
+</div>
+{% endblock %}
