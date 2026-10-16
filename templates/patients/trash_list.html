@@ -16,7 +16,10 @@
                 <td>{{ patient.phone }}</td>
                 <td>{{ patient.deleted_at|date:"d M Y" }}</td>
                 <td>
-                    <a href="{% url 'patients:restore_patient' patient.pk %}" class="btn btn-sm btn-outline-success">Restore</a>
+                    <form method="POST" action="{% url 'patients:restore_patient' patient.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-success">Restore</button>
+                    </form>
                 </td>
             </tr>
             {% empty %}

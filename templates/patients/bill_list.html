@@ -19,9 +19,9 @@
             <tr>
                 <td>{{ bill.id }}</td>
                 <td>{{ bill.patient.name }}</td>
-                <td>Rs. {{ bill.total_amount }}</td>
-                <td>Rs. {{ bill.amount_paid }}</td>
-                <td>Rs. {{ bill.balance }}</td>
+                <td>{{ CURRENCY }} {{ bill.total_amount }}</td>
+                <td>{{ CURRENCY }} {{ bill.amount_paid }}</td>
+                <td>{{ CURRENCY }} {{ bill.balance }}</td>
                 <td><span class="badge badge-{{ bill.status|lower }}">{{ bill.status }}</span></td>
                 <td>
                     <a href="{% url 'patients:bill_detail' bill.pk %}" class="btn btn-sm btn-outline-primary">View</a>

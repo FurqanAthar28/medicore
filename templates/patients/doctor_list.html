@@ -6,9 +6,11 @@
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="fw-semibold mb-0">All Doctors</h6>
+        {% if is_admin %}
         <a href="{% url 'patients:register_doctor' %}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus"></i> Add Doctor
         </a>
+        {% endif %}
     </div>
     <table class="table table-hover">
         <thead class="table-light">
@@ -23,7 +25,9 @@
                 <td>{{ doctor.phone }}</td>
                 <td>{{ doctor.email }}</td>
                 <td>
+                    {% if is_admin %}
                     <a href="{% url 'patients:update_doctor' doctor.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
