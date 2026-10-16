@@ -113,3 +113,32 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment of {self.amount} for Bill #{self.bill.id}"
+
+class Prescription(models.Model):
+    patient = models.ForeignKey(Patient, on_delete=models.PROTECT, related_name='prescriptions')
+    doctor = models.ForeignKey(Doctor, on_delete=models.PROTECT, related_name='prescriptions')
+    appointment = models.ForeignKey(
+        Appointment, on_delete=models.SET_NULL, null=True, blank=True, related_name='prescriptions',
+    )
+    diagnosis = models.CharField(max_length=255)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_prescriptions')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_dispensed(self):
+        return self.sales.exists()
+
+    def __str__(self):
+        return f"Prescription #{self.id} - {self.patient.name}"
+
+
+class PrescriptionItem(models.Model):
+    prescription = models.ForeignKey(Prescription, on_delete=models.CASCADE, related_name='items')
+    medicine = models.ForeignKey('pharmacy.Medicine', on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    dosage = models.CharField(max_length=100, help_text='e.g. 1 tablet twice daily')
+    duration = models.CharField(max_length=50, blank=True, help_text='e.g. 5 days')
+
+    def __str__(self):
+        return f"{self.medicine.name} x {self.quantity}"

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Prescription #{{ prescription.pk }}{% endblock %}
+{% block page_title %}Prescription #{{ prescription.pk }}{% endblock %}
+
+{% block content %}
+<div class="card p-4" style="max-width: 900px;">
+    <div class="d-flex justify-content-between flex-wrap gap-2 mb-3">
+        <div>
+            <h5 class="fw-bold mb-0">{{ HOSPITAL_NAME }}</h5>
+            <div class="text-muted small">Dr. {{ prescription.doctor.name }} — {{ prescription.doctor.specialization }}</div>
+        </div>
+        <div class="text-end small">
+            <div>Date: {{ prescription.created_at|date:"d M Y" }}</div>
+            <div>{% if sales %}<span class="badge bg-success">Dispensed</span>{% else %}<span class="badge bg-secondary">Not dispensed</span>{% endif %}</div>
+        </div>
+    </div>
+    <table class="table table-sm mb-3">
+        <tr><td class="text-muted" style="width: 160px;">Patient</td>
+            <td><a href="{% url 'patients:patient_detail' prescription.patient.pk %}">{{ prescription.patient.name }}</a>
+                ({{ prescription.patient.age }}, {{ prescription.patient.gender }})</td></tr>
+        <tr><td class="text-muted">Diagnosis</td><td>{{ prescription.diagnosis }}</td></tr>
+        {% if prescription.notes %}<tr><td class="text-muted">Notes</td><td>{{ prescription.notes|linebreaksbr }}</td></tr>{% endif %}
+    </table>
+
+    <h6 class="fw-semibold">Medicines</h6>
+    <table class="table table-bordered">
+        <thead class="table-light"><tr><th>Medicine</th><th>Qty</th><th>Dosage</th><th>Duration</th></tr></thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.medicine.name }} <span class="text-muted small">({{ item.medicine.form }})</span></td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.dosage }}</td>
+                <td>{{ item.duration|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if sales %}
+    <div class="small text-muted mb-3">
+        Dispensed in {% for sale in sales %}<a href="{% url 'pharmacy:sale_detail' sale.pk %}">Sale #{{ sale.pk }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="d-flex gap-2 d-print-none">
+        <a href="{% url 'pharmacy:sale_create' %}?prescription={{ prescription.pk }}" class="btn btn-success btn-sm">
+            <i class="bi bi-cart-plus"></i> {% if sales %}Dispense Again{% else %}Buy from Pharmacy{% endif %}
+        </a>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+    </div>
+</div>
+{% endblock %}

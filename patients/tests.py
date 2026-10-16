@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .forms import AppointmentForm, BillForm, PaymentForm
-from .models import Appointment, Bill, Doctor, Patient, Payment
+from .models import Appointment, Bill, Doctor, Patient, Payment, Prescription
 
 
 class BaseTestCase(TestCase):
@@ -159,3 +159,111 @@ class BillingTests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertTrue(response.content.startswith(b'%PDF'))
+
+
+class DoctorPortalTests(TestCase):
+    def setUp(self):
+        from pharmacy.models import Medicine
+        self.doctor_user = User.objects.create_user('drsara', password='pass12345')
+        self.doctor = Doctor.objects.create(
+            user=self.doctor_user, name='Sara', specialization='Cardiology',
+            phone='03007654321', email='sara@example.com',
+        )
+        self.other_doctor = Doctor.objects.create(
+            name='Omar', specialization='ENT', phone='03001112222', email='omar@example.com',
+        )
+        self.patient = Patient.objects.create(
+            name='Ali', age=30, gender='Male', phone='03001234567', address='Lahore',
+        )
+        self.medicine = Medicine.objects.create(name='Panadol', unit_price=Decimal('5'), stock_quantity=100)
+        self.client.force_login(self.doctor_user)
+
+    def _rx_data(self, **overrides):
+        data = {
+            'patient': self.patient.pk, 'diagnosis': 'Fever', 'notes': '',
+            'items-TOTAL_FORMS': '1', 'items-INITIAL_FORMS': '0',
+            'items-MIN_NUM_FORMS': '1', 'items-MAX_NUM_FORMS': '1000',
+            'items-0-medicine': self.medicine.pk, 'items-0-quantity': '10',
+            'items-0-dosage': '1 tablet twice daily', 'items-0-duration': '5 days', 'items-0-DELETE': '',
+        }
+        data.update(overrides)
+        return data
+
+    def test_dashboard_shows_doctor_portal(self):
+        response = self.client.get(reverse('patients:dashboard'))
+        self.assertTemplateUsed(response, 'dashboard/doctor_dashboard.html')
+
+    def test_doctor_can_select_patient(self):
+        response = self.client.get(reverse('patients:patient_list'), {'q': 'Ali'})
+        self.assertContains(response, reverse('patients:patient_detail', args=[self.patient.pk]))
+        response = self.client.get(reverse('patients:patient_detail', args=[self.patient.pk]))
+        self.assertContains(response, 'Write Prescription')
+
+    def test_doctor_writes_prescription_as_self(self):
+        # Even if a different doctor is posted, the logged-in doctor is used
+        response = self.client.post(reverse('patients:create_prescription'),
+                                    self._rx_data(doctor=self.other_doctor.pk))
+        prescription = Prescription.objects.get()
+        self.assertRedirects(response, reverse('patients:prescription_detail', args=[prescription.pk]))
+        self.assertEqual(prescription.doctor, self.doctor)
+        self.assertEqual(prescription.items.get().quantity, 10)
+
+    def test_prescription_requires_a_medicine(self):
+        response = self.client.post(reverse('patients:create_prescription'),
+                                    self._rx_data(**{'items-0-DELETE': 'on'}))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Prescription.objects.exists())
+
+    def test_consult_from_appointment_completes_it(self):
+        appointment = Appointment.objects.create(
+            patient=self.patient, doctor=self.doctor,
+            appointment_date=timezone.localdate(), appointment_time=time(9, 0),
+        )
+        self.client.post(reverse('patients:create_prescription') + f'?appointment={appointment.pk}', self._rx_data())
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.status, 'Completed')
+        self.assertEqual(Prescription.objects.get().appointment, appointment)
+
+    def test_doctor_sees_only_own_appointments(self):
+        mine = Appointment.objects.create(patient=self.patient, doctor=self.doctor,
+                                          appointment_date=timezone.localdate(), appointment_time=time(9, 0))
+        other = Appointment.objects.create(patient=self.patient, doctor=self.other_doctor,
+                                           appointment_date=timezone.localdate(), appointment_time=time(9, 0))
+        response = self.client.get(reverse('patients:appointment_list'))
+        self.assertIn(mine, response.context['appointments'])
+        self.assertNotIn(other, response.context['appointments'])
+        response = self.client.get(reverse('patients:update_appointment', args=[other.pk]))
+        self.assertRedirects(response, reverse('patients:appointment_list'))
+
+    def test_doctor_profile_access(self):
+        self.assertEqual(self.client.get(reverse('patients:doctor_detail', args=[self.doctor.pk])).status_code, 200)
+        response = self.client.get(reverse('patients:doctor_detail', args=[self.other_doctor.pk]))
+        self.assertRedirects(response, reverse('patients:dashboard'))
+
+    def test_non_doctor_staff_cannot_prescribe(self):
+        self.client.force_login(User.objects.create_user('nurse', password='pass12345'))
+        response = self.client.get(reverse('patients:create_prescription'))
+        self.assertRedirects(response, reverse('patients:dashboard'))
+
+
+class DoctorRegistrationTests(TestCase):
+    def setUp(self):
+        admin = User.objects.create_superuser('admin', password='pass12345')
+        self.client.force_login(admin)
+
+    def test_register_doctor_with_login(self):
+        self.client.post(reverse('patients:register_doctor'), {
+            'name': 'Hina', 'specialization': 'GP', 'phone': '03001231234', 'email': 'hina@example.com',
+            'username': 'drhina', 'password': 'Str0ng-Passw0rd!',
+        })
+        doctor = Doctor.objects.get(name='Hina')
+        self.assertEqual(doctor.user.username, 'drhina')
+        self.assertTrue(doctor.user.check_password('Str0ng-Passw0rd!'))
+
+    def test_username_without_password_rejected(self):
+        response = self.client.post(reverse('patients:register_doctor'), {
+            'name': 'Hina', 'specialization': 'GP', 'phone': '03001231234', 'email': 'hina@example.com',
+            'username': 'drhina', 'password': '',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Doctor.objects.exists())

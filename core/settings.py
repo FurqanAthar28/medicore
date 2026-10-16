@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'patients',
+    'pharmacy',
 ]
 
 MIDDLEWARE = [
@@ -167,5 +168,6 @@ MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
 HOSPITAL_NAME = config("HOSPITAL_NAME", default="MediCore")
 CURRENCY_SYMBOL = config("CURRENCY_SYMBOL", default="Rs.")
 ADMIN_GROUP_NAME = config("ADMIN_GROUP_NAME", default="Admin")
+PHARMACIST_GROUP_NAME = config("PHARMACIST_GROUP_NAME", default="Pharmacist")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

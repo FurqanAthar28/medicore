@@ -5,7 +5,12 @@
 {% block content %}
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-semibold mb-0">All Patients</h6>
+        <h6 class="fw-semibold mb-0">{% if mine %}My Patients{% else %}All Patients{% endif %}</h6>
+        <form method="GET" class="d-flex gap-2 ms-auto me-2">
+            {% if mine %}<input type="hidden" name="mine" value="1">{% endif %}
+            <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search name or phone...">
+            <button class="btn btn-sm btn-outline-secondary">Search</button>
+        </form>
         <a href="{% url 'patients:create_patient' %}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus"></i> Add Patient
         </a>
@@ -25,11 +30,15 @@
             {% for patient in patients %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ patient.name }}</td>
+                <td><a href="{% url 'patients:patient_detail' patient.pk %}">{{ patient.name }}</a></td>
                 <td>{{ patient.age }}</td>
                 <td>{{ patient.gender }}</td>
                 <td>{{ patient.phone }}</td>
                 <td>
+                    <a href="{% url 'patients:patient_detail' patient.pk %}" class="btn btn-sm btn-primary">Select</a>
+                    {% if current_doctor or is_admin %}
+                    <a href="{% url 'patients:create_prescription' %}?patient={{ patient.pk }}" class="btn btn-sm btn-outline-success">Prescribe</a>
+                    {% endif %}
                     <a href="{% url 'patients:update_patient' patient.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
                     <a href="{% url 'patients:delete_patient' patient.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                 </td>

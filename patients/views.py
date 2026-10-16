@@ -1,39 +1,42 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 from django.http import HttpResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
-from .models import Patient, Doctor, Appointment, Bill
-from .forms import PatientForm, DoctorForm, AppointmentForm, BillForm, PaymentForm
+from .models import Patient, Doctor, Appointment, Bill, Prescription
+from .forms import (
+    PatientForm, DoctorForm, AppointmentForm, BillForm, PaymentForm,
+    PrescriptionForm, PrescriptionItemFormSet,
+)
+from .roles import admin_required, doctor_or_admin_required, get_doctor, is_admin
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import simpleSplit
-from functools import wraps
 
 
-def group_required(*group_names):
-    def decorator(func):
-        @wraps(func)
-        @login_required
-        def wrapper(request, *args, **kwargs):
-            if request.user.groups.filter(name__in=group_names).exists() or request.user.is_superuser:
-                return func(request, *args, **kwargs)
-            messages.error(request, "You don't have permission to access this page.")
-            return redirect('patients:dashboard')
-        return wrapper
-    return decorator
-
-
-admin_required = group_required(settings.ADMIN_GROUP_NAME)
+def portal_doctor(user):
+    """The doctor whose portal this user sees, or None for admins and other staff."""
+    if is_admin(user):
+        return None
+    return get_doctor(user)
 
 
 @login_required
 def dashboard(request):
+    doctor = portal_doctor(request.user)
+    if doctor:
+        return doctor_dashboard(request, doctor)
+
+    from pharmacy.models import Medicine
+    from django.db.models import F
+
     total_patients = Patient.objects.filter(is_deleted=False).count()
     total_doctors = Doctor.objects.count()
     total_appointments = Appointment.objects.count()
@@ -47,8 +50,29 @@ def dashboard(request):
         'total_appointments': total_appointments,
         'unpaid_bills': unpaid_bills,
         'recent_appointments': recent_appointments,
+        'low_stock_medicines': Medicine.objects.filter(
+            is_active=True, stock_quantity__lte=F('reorder_level'),
+        ).order_by('stock_quantity')[:5],
     }
     return render(request, 'dashboard/admin_dashboard.html', context)
+
+
+def doctor_dashboard(request, doctor):
+    today = timezone.localdate()
+    appointments = Appointment.objects.filter(doctor=doctor).select_related('patient')
+    context = {
+        'doctor': doctor,
+        'today_appointments': appointments.filter(appointment_date=today).order_by('appointment_time'),
+        'upcoming_appointments': appointments.filter(
+            appointment_date__gt=today, appointment_date__lte=today + timedelta(days=7), status='Scheduled',
+        ).order_by('appointment_date', 'appointment_time'),
+        'recent_prescriptions': doctor.prescriptions.select_related('patient').order_by('-created_at')[:5],
+        'patient_count': Patient.objects.filter(
+            Q(appointment__doctor=doctor) | Q(prescriptions__doctor=doctor), is_deleted=False,
+        ).distinct().count(),
+        'prescription_count': doctor.prescriptions.count(),
+    }
+    return render(request, 'dashboard/doctor_dashboard.html', context)
 
 
 # --- Patients ---
@@ -56,7 +80,31 @@ def dashboard(request):
 @login_required
 def patient_list(request):
     patients = Patient.objects.filter(is_deleted=False).order_by('name')
-    return render(request, 'patients/patient_list.html', {'patients': patients})
+    query = request.GET.get('q', '').strip()
+    if query:
+        patients = patients.filter(Q(name__icontains=query) | Q(phone__icontains=query))
+    doctor = portal_doctor(request.user)
+    if doctor and request.GET.get('mine'):
+        patients = patients.filter(
+            Q(appointment__doctor=doctor) | Q(prescriptions__doctor=doctor)
+        ).distinct()
+    return render(request, 'patients/patient_list.html', {
+        'patients': patients, 'query': query, 'mine': bool(request.GET.get('mine')),
+    })
+
+
+@login_required
+def patient_detail(request, pk):
+    patient = get_object_or_404(Patient, pk=pk, is_deleted=False)
+    context = {
+        'patient': patient,
+        'appointments': patient.appointment_set.select_related('doctor').order_by('-appointment_date', '-appointment_time'),
+        'prescriptions': patient.prescriptions.select_related('doctor').prefetch_related('items__medicine', 'sales')
+                                .order_by('-created_at'),
+        'bills': patient.bill_set.prefetch_related('payment_set').order_by('-created_at'),
+        'sales': patient.pharmacy_sales.order_by('-created_at'),
+    }
+    return render(request, 'patients/patient_detail.html', context)
 
 
 @login_required
@@ -119,8 +167,33 @@ def restore_patient(request, pk):
 
 @login_required
 def doctor_list(request):
-    doctors = Doctor.objects.order_by('name')
+    doctors = Doctor.objects.select_related('user').annotate(
+        appointment_count=Count('appointment', distinct=True),
+    ).order_by('name')
     return render(request, 'patients/doctor_list.html', {'doctors': doctors})
+
+
+@login_required
+def doctor_detail(request, pk):
+    doctor = get_object_or_404(Doctor, pk=pk)
+    if not is_admin(request.user) and get_doctor(request.user) != doctor:
+        messages.error(request, "You can only view your own doctor profile.")
+        return redirect('patients:dashboard')
+    today = timezone.localdate()
+    appointments = Appointment.objects.filter(doctor=doctor).select_related('patient')
+    context = {
+        'doctor': doctor,
+        'upcoming_appointments': appointments.filter(appointment_date__gte=today, status='Scheduled')
+                                             .order_by('appointment_date', 'appointment_time')[:10],
+        'recent_prescriptions': doctor.prescriptions.select_related('patient').order_by('-created_at')[:10],
+        'stats': {
+            'total': appointments.count(),
+            'completed': appointments.filter(status='Completed').count(),
+            'scheduled': appointments.filter(status='Scheduled', appointment_date__gte=today).count(),
+            'prescriptions': doctor.prescriptions.count(),
+        },
+    }
+    return render(request, 'patients/doctor_detail.html', context)
 
 
 @admin_required
@@ -148,13 +221,24 @@ def update_doctor(request, pk):
 
 @login_required
 def appointment_list(request):
-    appointments = Appointment.objects.select_related('patient', 'doctor').order_by('-created_at')
-    return render(request, 'patients/appointment_list.html', {'appointments': appointments})
+    appointments = Appointment.objects.select_related('patient', 'doctor').order_by('-appointment_date', '-appointment_time')
+    doctor = portal_doctor(request.user)
+    if doctor:
+        appointments = appointments.filter(doctor=doctor)
+    status = request.GET.get('status', '')
+    if status in dict(Appointment.STATUS_CHOICES):
+        appointments = appointments.filter(status=status)
+    return render(request, 'patients/appointment_list.html', {
+        'appointments': appointments, 'status': status, 'status_choices': Appointment.STATUS_CHOICES,
+    })
 
 
 @login_required
 def create_appointment(request):
-    form = AppointmentForm(request.POST or None)
+    initial = {}
+    if request.GET.get('patient', '').isdigit():
+        initial['patient'] = request.GET['patient']
+    form = AppointmentForm(request.POST or None, initial=initial, doctor=portal_doctor(request.user))
     if form.is_valid():
         obj = form.save(commit=False)
         obj.created_by = request.user
@@ -167,12 +251,82 @@ def create_appointment(request):
 @login_required
 def update_appointment(request, pk):
     appointment = get_object_or_404(Appointment, pk=pk)
-    form = AppointmentForm(request.POST or None, instance=appointment)
+    doctor = portal_doctor(request.user)
+    if doctor and appointment.doctor_id != doctor.pk:
+        messages.error(request, "You can only edit your own appointments.")
+        return redirect('patients:appointment_list')
+    form = AppointmentForm(request.POST or None, instance=appointment, doctor=doctor)
     if form.is_valid():
         form.save()
         messages.success(request, 'Appointment updated successfully.')
         return redirect('patients:appointment_list')
     return render(request, 'patients/appointment_form.html', {'form': form, 'title': 'Update Appointment'})
+
+
+# --- Prescriptions ---
+
+@doctor_or_admin_required
+def prescription_list(request):
+    prescriptions = Prescription.objects.select_related('patient', 'doctor').prefetch_related('sales') \
+                                        .order_by('-created_at')
+    doctor = portal_doctor(request.user)
+    if doctor:
+        prescriptions = prescriptions.filter(doctor=doctor)
+    return render(request, 'patients/prescription_list.html', {'prescriptions': prescriptions})
+
+
+@doctor_or_admin_required
+def create_prescription(request):
+    # Admins pick the doctor on the form; doctors always prescribe as themselves
+    doctor = portal_doctor(request.user)
+    initial = {}
+    appointment = None
+    if request.GET.get('appointment', '').isdigit():
+        appointment = get_object_or_404(Appointment, pk=request.GET['appointment'])
+        if doctor and appointment.doctor_id != doctor.pk:
+            messages.error(request, "That appointment belongs to another doctor.")
+            return redirect('patients:appointment_list')
+        initial.update(patient=appointment.patient_id, doctor=appointment.doctor_id)
+    elif request.GET.get('patient', '').isdigit():
+        initial['patient'] = request.GET['patient']
+
+    form = PrescriptionForm(request.POST or None, initial=initial, doctor=doctor)
+    formset = PrescriptionItemFormSet(request.POST or None, prefix='items')
+    if request.method == 'POST' and form.is_valid() and formset.is_valid():
+        with transaction.atomic():
+            prescription = form.save(commit=False)
+            if doctor:
+                prescription.doctor = doctor
+            prescription.created_by = request.user
+            if appointment and appointment.patient_id == prescription.patient_id:
+                prescription.appointment = appointment
+            prescription.save()
+            formset.instance = prescription
+            formset.save()
+            if prescription.appointment and prescription.appointment.status == 'Scheduled':
+                prescription.appointment.status = 'Completed'
+                prescription.appointment.save(update_fields=['status'])
+        messages.success(request, 'Prescription saved.')
+        return redirect('patients:prescription_detail', pk=prescription.pk)
+    return render(request, 'patients/prescription_form.html', {
+        'form': form, 'formset': formset, 'appointment': appointment,
+    })
+
+
+@login_required
+def prescription_detail(request, pk):
+    prescription = get_object_or_404(
+        Prescription.objects.select_related('patient', 'doctor', 'appointment'), pk=pk,
+    )
+    doctor = portal_doctor(request.user)
+    if doctor and prescription.doctor_id != doctor.pk:
+        messages.error(request, "You can only view your own prescriptions.")
+        return redirect('patients:prescription_list')
+    return render(request, 'patients/prescription_detail.html', {
+        'prescription': prescription,
+        'items': prescription.items.select_related('medicine'),
+        'sales': prescription.sales.order_by('-created_at'),
+    })
 
 
 # --- Bills ---

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Patient, Doctor, Appointment, Bill, Payment
+from .models import Patient, Doctor, Appointment, Bill, Payment, Prescription, PrescriptionItem
 
 
 @admin.register(Patient)
@@ -11,7 +11,7 @@ class PatientAdmin(admin.ModelAdmin):
 
 @admin.register(Doctor)
 class DoctorAdmin(admin.ModelAdmin):
-    list_display = ('name', 'specialization', 'phone', 'email')
+    list_display = ('name', 'specialization', 'phone', 'email', 'user')
     search_fields = ('name', 'specialization')
 
 
@@ -44,3 +44,15 @@ class PaymentAdmin(admin.ModelAdmin):
         super().delete_queryset(request, queryset)
         for bill in bills:
             bill.update_status()
+
+
+class PrescriptionItemInline(admin.TabularInline):
+    model = PrescriptionItem
+    extra = 0
+
+
+@admin.register(Prescription)
+class PrescriptionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'patient', 'doctor', 'diagnosis', 'created_at')
+    search_fields = ('patient__name', 'diagnosis')
+    inlines = [PrescriptionItemInline]

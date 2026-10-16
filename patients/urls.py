@@ -10,6 +10,7 @@ urlpatterns = [
     # Patients
     path('patients/', views.patient_list, name='patient_list'),
     path('patients/create/', views.create_patient, name='create_patient'),
+    path('patients/<int:pk>/', views.patient_detail, name='patient_detail'),
     path('patients/<int:pk>/update/', views.update_patient, name='update_patient'),
     path('patients/<int:pk>/delete/', views.delete_patient, name='delete_patient'),
     path('patients/<int:pk>/restore/', views.restore_patient, name='restore_patient'),
@@ -18,12 +19,18 @@ urlpatterns = [
     # Doctors
     path('doctors/', views.doctor_list, name='doctor_list'),
     path('doctors/create/', views.register_doctor, name='register_doctor'),
+    path('doctors/<int:pk>/', views.doctor_detail, name='doctor_detail'),
     path('doctors/<int:pk>/update/', views.update_doctor, name='update_doctor'),
 
     # Appointments
     path('appointments/', views.appointment_list, name='appointment_list'),
     path('appointments/create/', views.create_appointment, name='create_appointment'),
     path('appointments/<int:pk>/update/', views.update_appointment, name='update_appointment'),
+
+    # Prescriptions
+    path('prescriptions/', views.prescription_list, name='prescription_list'),
+    path('prescriptions/create/', views.create_prescription, name='create_prescription'),
+    path('prescriptions/<int:pk>/', views.prescription_detail, name='prescription_detail'),
 
     # Bills
     path('bills/', views.bill_list, name='bill_list'),

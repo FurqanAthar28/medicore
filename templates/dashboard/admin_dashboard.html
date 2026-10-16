@@ -30,6 +30,15 @@
     </div>
 </div>
 
+{% if low_stock_medicines %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center">
+    <div><i class="bi bi-exclamation-triangle me-1"></i> <strong>Low stock:</strong>
+        {% for med in low_stock_medicines %}{{ med.name }} ({{ med.stock_quantity }}){% if not forloop.last %}, {% endif %}{% endfor %}
+    </div>
+    <a href="{% url 'pharmacy:medicine_list' %}?low=1" class="btn btn-sm btn-outline-dark">View</a>
+</div>
+{% endif %}
+
 <div class="card p-4">
     <h6 class="fw-semibold mb-3">Recent Appointments</h6>
     <table class="table table-hover">

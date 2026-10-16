@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Dr. {{ doctor.name }}{% endblock %}
+{% block page_title %}Dr. {{ doctor.name }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card p-4">
+            <h6 class="fw-semibold mb-3">Profile</h6>
+            <table class="table table-sm mb-3">
+                <tr><td class="text-muted">Specialization</td><td>{{ doctor.specialization }}</td></tr>
+                <tr><td class="text-muted">Phone</td><td>{{ doctor.phone }}</td></tr>
+                <tr><td class="text-muted">Email</td><td>{{ doctor.email }}</td></tr>
+                <tr><td class="text-muted">Portal login</td>
+                    <td>{% if doctor.user %}<span class="badge bg-success">{{ doctor.user.username }}</span>{% else %}<span class="badge bg-secondary">No login</span>{% endif %}</td></tr>
+            </table>
+            {% if is_admin %}
+            <a href="{% url 'patients:update_doctor' doctor.pk %}" class="btn btn-outline-primary btn-sm">Edit Doctor</a>
+            {% endif %}
+        </div>
+        <div class="row g-3 mt-1">
+            <div class="col-6"><div class="card stat-card blue p-3"><div class="text-muted small">Appointments</div><div class="fs-4 fw-bold">{{ stats.total }}</div></div></div>
+            <div class="col-6"><div class="card stat-card green p-3"><div class="text-muted small">Completed</div><div class="fs-4 fw-bold">{{ stats.completed }}</div></div></div>
+            <div class="col-6"><div class="card stat-card orange p-3"><div class="text-muted small">Upcoming</div><div class="fs-4 fw-bold">{{ stats.scheduled }}</div></div></div>
+            <div class="col-6"><div class="card stat-card red p-3"><div class="text-muted small">Prescriptions</div><div class="fs-4 fw-bold">{{ stats.prescriptions }}</div></div></div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card p-4 mb-4">
+            <h6 class="fw-semibold mb-3">Upcoming Appointments</h6>
+            <table class="table table-hover">
+                <thead class="table-light"><tr><th>Date</th><th>Time</th><th>Patient</th></tr></thead>
+                <tbody>
+                    {% for appt in upcoming_appointments %}
+                    <tr>
+                        <td>{{ appt.appointment_date|date:"d M Y" }}</td>
+                        <td>{{ appt.appointment_time|time:"H:i" }}</td>
+                        <td><a href="{% url 'patients:patient_detail' appt.patient.pk %}">{{ appt.patient.name }}</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted">No upcoming appointments.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card p-4">
+            <h6 class="fw-semibold mb-3">Recent Prescriptions</h6>
+            <table class="table table-hover">
+                <thead class="table-light"><tr><th>#</th><th>Date</th><th>Patient</th><th>Diagnosis</th></tr></thead>
+                <tbody>
+                    {% for rx in recent_prescriptions %}
+                    <tr>
+                        <td><a href="{% url 'patients:prescription_detail' rx.pk %}">{{ rx.pk }}</a></td>
+                        <td>{{ rx.created_at|date:"d M Y" }}</td>
+                        <td>{{ rx.patient.name }}</td>
+                        <td>{{ rx.diagnosis }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted">No prescriptions yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

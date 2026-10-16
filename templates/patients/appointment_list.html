@@ -5,7 +5,13 @@
 {% block content %}
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-semibold mb-0">All Appointments</h6>
+        <h6 class="fw-semibold mb-0">{% if current_doctor and not is_admin %}My Appointments{% else %}All Appointments{% endif %}</h6>
+        <form method="GET" class="ms-auto me-2">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All statuses</option>
+                {% for value, label in status_choices %}<option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </form>
         <a href="{% url 'patients:create_appointment' %}" class="btn btn-primary btn-sm">
             <i class="bi bi-plus"></i> New Appointment
         </a>
@@ -18,12 +24,15 @@
             {% for appt in appointments %}
             <tr>
                 <td>{{ forloop.counter }}</td>
-                <td>{{ appt.patient.name }}</td>
+                <td><a href="{% url 'patients:patient_detail' appt.patient.pk %}">{{ appt.patient.name }}</a></td>
                 <td>Dr. {{ appt.doctor.name }}</td>
                 <td>{{ appt.appointment_date }}</td>
                 <td>{{ appt.appointment_time }}</td>
                 <td><span class="badge badge-{{ appt.status|lower }}">{{ appt.status }}</span></td>
                 <td>
+                    {% if appt.status == 'Scheduled' and current_doctor and current_doctor.pk == appt.doctor_id %}
+                    <a href="{% url 'patients:create_prescription' %}?appointment={{ appt.pk }}" class="btn btn-sm btn-success">Consult</a>
+                    {% endif %}
                     <a href="{% url 'patients:update_appointment' appt.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
                 </td>
             </tr>
